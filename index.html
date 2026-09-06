@@ -376,6 +376,7 @@
   document.getElementById('yr').textContent = new Date().getFullYear();
 
   // Email capture
+  var FORM_ENDPOINT = 'https://formspree.io/f/xeaqlalq';
   var form = document.getElementById('signup');
   var email = document.getElementById('email');
   var note = document.getElementById('note');
@@ -395,9 +396,37 @@
       if (list.indexOf(val) === -1) list.push(val);
       localStorage.setItem('fs_waitlist', JSON.stringify(list));
     } catch (_) {}
-    note.textContent = "You're on the list. We'll reach out before your next Friday.";
-    note.className = 'form-note show';
-    form.reset();
+
+    var btn = form.querySelector('.btn');
+    var btnText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    note.textContent = '';
+    note.className = 'form-note';
+
+    fetch(FORM_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: (function () { var f = new FormData(); f.append('email', val); return f; })()
+    }).then(function (res) {
+      if (res.ok) {
+        note.textContent = "You're on the list. We'll reach out before your next Friday.";
+        note.className = 'form-note show';
+        form.reset();
+      } else {
+        return res.json().then(function (d) {
+          var msg = (d && d.errors && d.errors[0] && d.errors[0].message) || 'Something went wrong. Please try again.';
+          note.textContent = msg;
+          note.className = 'form-note show err';
+        });
+      }
+    }).catch(function () {
+      note.textContent = 'Network error — please try again.';
+      note.className = 'form-note show err';
+    }).finally(function () {
+      btn.disabled = false;
+      btn.textContent = btnText;
+    });
   });
 
   // Interactive readiness terminal
